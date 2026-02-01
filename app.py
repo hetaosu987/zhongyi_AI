@@ -255,9 +255,7 @@ init_state()
 
 # ================= 3. 侧边栏 =================
 with st.sidebar:
-    c1, c2 = st.columns([1, 4])
-    with c1: st.markdown("🌿")
-    with c2: st.markdown("### 中医智能小助手")
+    st.markdown("### 中医智能小助手")
     
     if st.button("🔄 开始新问诊", type="primary", use_container_width=True):
         reset_chat()
@@ -291,7 +289,7 @@ with st.sidebar:
             st.session_state.current_tip = get_ai_health_tip()
         st.rerun()
         
-    st.markdown("<br>"*5, unsafe_allow_html=True)
+    st.markdown("---")
     st.caption("⚠️ 本产品仅为AI技术演示，内容仅供参考，不能替代专业医疗诊断。")
 
 # ================= 4. 主逻辑控制 =================
@@ -403,3 +401,4 @@ if st.session_state.stage == 2:
 # 5. 输入框
 if prompt := st.chat_input("输入回答..."):
     handle_user_input(prompt)
+
