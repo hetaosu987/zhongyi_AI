@@ -255,11 +255,7 @@ init_state()
 
 # ================= 3. 侧边栏 =================
 with st.sidebar:
-    st.markdown("""
-    <div style="color:#8d6e63; font-weight:bold; font-size:18px;">
-        中医智能小助手
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("### 中医智能小助手")
     
     if st.button("🔄 开始新问诊", type="primary", use_container_width=True):
         reset_chat()
@@ -406,5 +402,6 @@ if st.session_state.stage == 2:
 if prompt := st.chat_input("输入回答..."):
 
     handle_user_input(prompt)
+
 
 
