@@ -4,13 +4,25 @@ import time
 from zhipuai import ZhipuAI
 
 # ================= 0. 基础配置 =================
-# 尝试获取API KEY，如果没配置secrets则提示
+import os
+
+# 尝试获取API KEY
 try:
+    # 优先从 Streamlit Secrets 获取
     api_key = st.secrets["API_KEY"]
 except:
-    # 为了防止报错，这里放一个占位符，或者你可以临时硬编码方便调试
-    api_key = " " 
-    # st.warning("未检测到 .streamlit/secrets.toml 配置，请确保API KEY正确。")
+    # ❌ 绝对不要在这里写中文，也不要写 "Your_Key_Here"
+    # ✅ 如果获取失败，就让它为空，后面用 if 判断拦截
+    api_key = "" 
+
+# 🛑 核心拦截逻辑：如果没有 Key，直接停止，不让错误发生
+if not api_key:
+    st.error("🚫 启动失败：未检测到 API Key")
+    st.markdown("### 解决方法")
+    st.markdown("1. 点击右下角 **Manage app**")
+    st.markdown("2. 点击 **Settings** -> **Secrets**")
+    st.markdown("3. 输入：`API_KEY = '你的智谱AI真实Key'`")
+    st.stop() # 这一行非常重要，它会阻止程序继续向下运行从而避免报错
 
 client = ZhipuAI(api_key=api_key)
 MAX_TURNS = 5 
@@ -401,5 +413,6 @@ if st.session_state.stage == 2:
 # 5. 输入框
 if prompt := st.chat_input("输入回答..."):
     handle_user_input(prompt)
+
 
 
