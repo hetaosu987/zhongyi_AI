@@ -397,7 +397,7 @@ if st.session_state.stage == 2:
     
     st.caption("您可以继续追问详情：")
     c1, c2, c3, c4 = st.columns(4)
-    if c1.button("🍲 七日食谱"): handle_user_input("请再推荐一个适合我的七日食疗方，要有具体做法。")
+    if c1.button("🍲 七日食谱"): handle_user_input("请推荐一个适合我的七天食谱，要有具体做法。")
     if c2.button("🚫 详细忌口"): handle_user_input("请列出我绝对不能吃的食物清单。")
     if c3.button("🍵 茶饮调理"): handle_user_input("平时上班适合喝什么茶？")
     if c4.button("💆 更多穴位"): handle_user_input("还有什么穴位可以按？")
@@ -405,4 +405,5 @@ if st.session_state.stage == 2:
 # 5. 输入框
 if prompt := st.chat_input("输入回答..."):
     handle_user_input(prompt)
+
 
