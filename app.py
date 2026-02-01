@@ -291,7 +291,7 @@ with st.sidebar:
             st.session_state.current_tip = get_ai_health_tip()
         st.rerun()
         
-    st.markdown("<br>"*5, unsafe_allow_html=True)
+    st.markdown("<br>"*2, unsafe_allow_html=True)
     st.caption("⚠️ 本产品仅为AI技术演示，内容仅供参考，不能替代专业医疗诊断。")
 
 # ================= 4. 主逻辑控制 =================
@@ -402,4 +402,5 @@ if st.session_state.stage == 2:
 
 # 5. 输入框
 if prompt := st.chat_input("输入回答..."):
+
     handle_user_input(prompt)
