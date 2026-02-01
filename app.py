@@ -4,22 +4,24 @@ import time
 from zhipuai import ZhipuAI
 
 # ================= 0. 基础配置 =================
-# 尝试获取API KEY
+# 尝试获取API KEY，如果没配置secrets则提示
 try:
     api_key = st.secrets["API_KEY"]
 except:
-    # 修复：这里必须用空字符串或英文，不能用中文，否则会报 UnicodeEncodeError
-    api_key = "" 
+    # 为了防止报错，这里放一个占位符，或者你可以临时硬编码方便调试
+    api_key = "你的_API_KEY_在这里" 
+    # st.warning("未检测到 .streamlit/secrets.toml 配置，请确保API KEY正确。")
 
-# 如果没有Key，给出提示但允许代码运行（避免直接崩溃）
-if not api_key:
-    # 仅在本地调试时可以使用硬编码Key，但在云端必须用Secrets
-    # api_key = "YOUR_KEY" 
-    pass
+# 核心修改：如果没有有效的 Key，直接停止运行并提示用户
+if not api_key or "YOUR_API_KEY" in api_key:
+    st.error("⚠️ 未检测到有效的 API Key！")
+    st.info("请在 .streamlit/secrets.toml 中配置 API_KEY，或在 Streamlit Cloud 后台设置 Secrets。")
+    st.stop()
 
 client = ZhipuAI(api_key=api_key)
 
-# [修改] 移除了 MAX_TURNS 常量，因为不再限制轮次
+# [修改点 1] 最大轮次改为 8
+MAX_TURNS = 8
 
 CMD_GENERATE_REPORT = "我描述完了。请按照规定的Markdown格式，引用古籍，给出详细的、篇幅较长的诊断报告（包含具体的食疗方做法和穴位位置）。"
 
@@ -167,44 +169,46 @@ def get_ai_health_tip():
 
 def init_state():
     if "messages" not in st.session_state:
-        # [修改] System Prompt 移除了对前5轮的限制，改为智能判断
+        # [修改点 2] 优化 System Prompt，允许 AI 自主决定何时结束问诊
         system_prompt = f"""
-        你是一位经验丰富的中医主任医师，精通《黄帝内经》《伤寒杂病论》《金匮要略》，擅长体质辨证与日常养生调理，秉持“辨证施治、标本兼顾”的理念。
+        你是一位经验丰富的中医主任医师，精通《黄帝内经》《伤寒杂病论》，擅长体质辨证。
         
-        【问诊策略：自由辨证模式】
-        1.  态度亲切温和，始终称呼用户为“您”。
-        2.  **没有固定的问诊轮次限制**。请根据中医“望闻问切”的逻辑，逐一询问用户的核心症状（寒热、汗出、头身、二便、饮食、睡眠、情志等）。
-        3.  每次**仅提出1个**核心封闭式/半封闭式短问题，不要一次抛出多个问题。
-        4.  **智能收尾**：如果你认为已经收集到了足够的信息（明确了病机、虚实、脏腑），**不需要等待用户指令，请直接开始输出诊断报告**。
-        5.  **用户主动触发**：如果用户发送“我描述完了”或“生成报告”，请立即停止发问，根据已知信息生成报告。
+        【阶段一：问诊】
+        1.  态度亲切，称呼“您”。
+        2.  **每次仅问1个核心问题**。
+        3.  你最多可以问 {MAX_TURNS} 个问题。
+        4.  **重要：智能收尾机制**
+            - 如果你在 {MAX_TURNS} 轮之前，已经收集到了足够的症状信息（寒热、汗液、二便、饮食、睡眠、情志、舌象等）足以精准辨证，**请直接停止提问，立即输出诊断报告**。
+            - 不需要等待用户说“描述完毕”，你可以主动给出结果。
+            - 如果信息不足，继续提问，直到第 {MAX_TURNS} 轮。
         
-        【诊断报告生成规范】
-        当决定生成报告时，请严格遵循以下Markdown板块格式，不得遗漏：
+        【阶段二：诊断报告】
+        当决定生成报告时，**必须严格**遵循以下Markdown板块（不少于800字）：
         
         ### 🩺 深度辨证
-        (分析病机、阴阳虚实、体质判断)
+        (分析病机、阴阳虚实、体质)
         
         ### 📜 经典溯源
-        (引用《黄帝内经》等经典，并通俗释义)
+        (引用经典原文及通俗释义)
         
         ### 🍵 膳食良方
-        (推荐2款食疗方：方名+食材+做法+功效+禁忌)
+        (2款食谱：方名+食材+做法+功效+禁忌)
         
         ### 🧘 导引按跷
-        (推荐2个穴位：位置+手法+频率)
+        (2个穴位：位置+手法+频率)
         
         ### 🌞 起居禁忌
         (作息建议 + 忌口清单)
         
         ### 😊 情志调理
-        (简易情志建议)
+        (简易调理建议)
         
         ### ⚠️ 调理须知
-        (免责声明与就医提示)
+        (免责声明)
         
-        【补充强制要求】
-        1. 全程不使用任何西医术语。
-        2. 语言风格专业、温和、严谨。
+        【补充要求】
+        1. 不使用西医术语。
+        2. 语言风格专业温和。
         """
         st.session_state.messages = [
             {"role": "system", "content": system_prompt},
@@ -212,24 +216,26 @@ def init_state():
         ]
     
     if "stage" not in st.session_state: st.session_state.stage = 0 
-    # [修改] 移除了 turn_count 初始化
+    if "turn_count" not in st.session_state: st.session_state.turn_count = 0 
     if "current_tip" not in st.session_state: st.session_state.current_tip = FALLBACK_TIPS[0]
     if "suggested_options" not in st.session_state: st.session_state.suggested_options = []
 
+# === [修改点 3] 核心修复：优化生成回复选项的逻辑 ===
 def generate_smart_replies(last_ai_question):
     try:
+        # 修改 prompt：专门处理“A还是B”的选择题
         prompt = f"""
-        任务：基于中医问诊场景。
+        任务：基于中医问诊场景，帮患者预判3个回答。
         医生刚才问：“{last_ai_question}”
         
-        请帮患者预判3个最可能的简短回答（不要超过6个字）。
         要求：
-        1. 直接输出3个答案，用竖线 "|" 分隔。
-        2. 不要输出任何多余的解释、序号或前缀。
-        3. 如果是是非题，输出：是|否|不清楚。
-        
-        正确输出示例：睡得很差|一般般|睡得很好
-        错误输出示例：选项1|选项2|选项3
+        1. 如果医生问的是“是否...”的简单问题，输出：是|否|不清楚。
+        2. **重点**：如果医生问的是“选择题”（例如：是A还是B？有没有A或者B？），**必须输出具体选项**。
+           - 例：“睡不着还是盗汗？” -> 输出：睡不着|盗汗|都有|都没有
+           - 例：“口干还是口苦？” -> 输出：口干|口苦|又干又苦
+           - **绝对不要**在这种情况下输出简单的“是/否”。
+        3. 答案不要超过6个字。
+        4. 直接输出3-4个答案，用竖线 "|" 分隔。
         """
         
         response = client.chat.completions.create(
@@ -244,13 +250,13 @@ def generate_smart_replies(last_ai_question):
         if len(options) < 2:
             return ["有", "没有", "不清楚"]
             
-        return options[:3] 
+        return options[:4] # 取前4个，适应“A|B|都|无”的情况
     except Exception as e:
         return ["是", "否", "不清楚"]
 
 def reset_chat():
     del st.session_state["messages"]
-    # [修改] 移除了 turn_count 重置
+    st.session_state.turn_count = 0
     st.session_state.suggested_options = []
     init_state()
     st.session_state.stage = 0
@@ -269,7 +275,10 @@ with st.sidebar:
     if st.button("🔄 开始新问诊", type="primary", use_container_width=True):
         reset_chat()
     
-    # [修改] 移除了进度条显示代码
+    if st.session_state.stage == 1:
+        st.caption(f"问诊进度 (最大 {MAX_TURNS} 轮)")
+        # 进度条只是视觉参考
+        st.progress(min(st.session_state.turn_count / MAX_TURNS, 1.0))
     
     st.markdown("---")
     st.caption("🛠️ 辅助功能 (待上线)")
@@ -290,6 +299,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
+    # 换一换按钮逻辑
     if st.button("🔄 获取新知识"):
         with st.spinner("AI正在查阅医书..."): 
             st.session_state.current_tip = get_ai_health_tip()
@@ -297,17 +307,9 @@ with st.sidebar:
         
     st.markdown("<br>"*3, unsafe_allow_html=True)
     st.markdown("---")
-    
     st.markdown(
         """
-        <div style='
-            text-align: center; 
-            color: #666; 
-            font-size: 12px; 
-            padding: 10px 0;
-            background-color: rgba(0,0,0,0.02);
-            border-radius: 5px;
-        '>
+        <div style='text-align: center; color: #666; font-size: 12px; padding: 10px 0; background-color: rgba(0,0,0,0.02); border-radius: 5px;'>
             ⚠️ 本产品仅为AI技术演示，内容仅供参考，不能替代专业医疗诊断。
         </div>
         """, 
@@ -320,9 +322,10 @@ st.title("🌿 中医智能小助手")
 # 渲染历史
 for message in st.session_state.messages:
     if message["role"] != "system":
+        # 如果消息内容是生成报告的隐藏指令，则跳过显示
         if message["content"] == CMD_GENERATE_REPORT:
             continue
-            
+        
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
@@ -332,8 +335,14 @@ def handle_user_input(text):
     if st.session_state.stage == 0:
         st.session_state.stage = 1
     
-    # [修改] 移除了 turn_count 增加逻辑和自动触发逻辑
-    # 现在完全依赖：1.用户点击按钮触发 2.AI自动判断触发
+    if st.session_state.stage == 1:
+        st.session_state.turn_count += 1
+        # [修改] 只有在达到绝对最大上限时才强制触发，否则交给 AI 或用户按钮决定
+        if st.session_state.turn_count >= MAX_TURNS:
+            st.session_state.messages.append({
+                "role": "user", 
+                "content": CMD_GENERATE_REPORT
+            })
     st.rerun()
 
 # 1. 首页
@@ -350,13 +359,12 @@ if st.session_state.stage == 0 and len(st.session_state.messages) <= 2:
 # 2. AI 回复
 if st.session_state.messages[-1]["role"] == "user":
     with st.chat_message("assistant"):
-        # 判断是否正在生成报告（用户触发 或 AI之前已经进入状态）
-        # [修改] 判断逻辑：只要用户发了指令，或者是AI自己开始写了
-        is_generating_report = "描述完" in st.session_state.messages[-1]["content"] or "生成报告" in st.session_state.messages[-1]["content"]
+        # 判断是否正在生成报告（通过轮次 或 指令 或 状态）
+        is_generating_report_cmd = st.session_state.turn_count >= MAX_TURNS or CMD_GENERATE_REPORT in st.session_state.messages[-1]["content"]
         
-        spinner_text = "🌿 小助手正在查阅古籍，撰写深度诊断报告..." if is_generating_report else "思考中..."
+        spinner_text = "🌿 小助手正在查阅古籍，撰写深度诊断报告..." if is_generating_report_cmd else "思考中..."
 
-        if is_generating_report:
+        if is_generating_report_cmd:
             st.caption("💡 等候期间，可查看左侧「养生锦囊」获取实用小知识")
         
         with st.spinner(spinner_text):
@@ -373,8 +381,10 @@ if st.session_state.messages[-1]["role"] == "user":
             
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
-            # [核心修改] 智能检测：如果AI回复中包含了报告的特征标题，自动切换到结果页
-            if "### 🩺 深度辨证" in full_response or is_generating_report:
+            # [修改点 4] 智能检测：如果 AI 的回复里包含了“深度辨证”等报告关键词，说明 AI 自动决定生成报告了
+            ai_decided_to_report = "### 🩺 深度辨证" in full_response or "### 深度辨证" in full_response
+            
+            if is_generating_report_cmd or ai_decided_to_report:
                 st.session_state.stage = 2
                 st.session_state.suggested_options = []
             else:
@@ -385,15 +395,16 @@ if st.session_state.messages[-1]["role"] == "user":
 # 3. 问诊中
 if st.session_state.stage == 1:
     if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.suggested_options:
-        st.caption(f"请选择您的情况，或在下方对话框详细描述（AI将智能判断何时生成报告）")
+        st.caption(f"请选择您的具体情况，或手动输入 (当前第 {st.session_state.turn_count} 轮)")
         cols = st.columns(len(st.session_state.suggested_options))
         for i, option in enumerate(st.session_state.suggested_options):
             if cols[i].button(option):
                 handle_user_input(option)
         
         st.markdown("---")
-        # [修改] 无论第几轮，都显示“主动结束”按钮，作为保底方案
-        if st.button("✅ 描述完毕，直接看结果", type="primary", use_container_width=True):
+        # [修改点 5] 用户主动触发按钮
+        if st.button("✅ 结束问诊，生成养生诊断报告", type="primary", use_container_width=True):
+            # 发送隐形指令
             handle_user_input(CMD_GENERATE_REPORT)
 
 # 4. 结果页
