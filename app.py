@@ -353,7 +353,10 @@ if st.session_state.stage == 0 and len(st.session_state.messages) <= 2:
 if st.session_state.messages[-1]["role"] == "user":
     with st.chat_message("assistant"):
         is_generating_report = st.session_state.turn_count >= MAX_TURNS or "描述完" in st.session_state.messages[-1]["content"]
-        spinner_text = "🌿 小助手正在查阅古籍，撰写深度诊断报告..." if is_generating_report else "思考中..."
+        spinner_text = "🌿 小助手正在查阅古籍，撰写深度诊断报告...(等待太无聊？查阅左侧养生锦囊吧！)" if is_generating_report else "思考中..."
+
+        if is_generating_report:
+            st.caption("💡 等候期间，可查看左侧「养生锦囊」获取实用小知识")
         
         with st.spinner(spinner_text):
             response = client.chat.completions.create(
@@ -418,6 +421,7 @@ if st.session_state.stage == 2:
 # 5. 输入框
 if prompt := st.chat_input("输入回答..."):
     handle_user_input(prompt)
+
 
 
 
