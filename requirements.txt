@@ -1,0 +1,4 @@
+# 必须添加的依赖：zhipuai
+zhipuai
+# 基础依赖：streamlit
+streamlit
