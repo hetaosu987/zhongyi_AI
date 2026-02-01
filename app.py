@@ -25,7 +25,7 @@ MAX_TURNS = 8
 
 CMD_GENERATE_REPORT = "我描述完了。请按照规定的Markdown格式，引用古籍，给出详细的、篇幅较长的诊断报告（包含具体的食疗方做法和穴位位置）。"
 
-st.set_page_config(page_title="国医AI智能问诊", page_icon="🌿", layout="wide")
+st.set_page_config(page_title="中医智能小助手", page_icon="🌿", layout="wide")
 
 # ================= 1. CSS：样式优化 (保持不变) =================
 st.markdown("""
@@ -441,5 +441,6 @@ if st.session_state.stage == 2:
 # 5. 输入框
 if prompt := st.chat_input("输入回答..."):
     handle_user_input(prompt)
+
 
 
