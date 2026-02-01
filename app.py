@@ -9,7 +9,7 @@ try:
     api_key = st.secrets["API_KEY"]
 except:
     # 为了防止报错，这里放一个占位符，或者你可以临时硬编码方便调试
-    api_key = "你的_API_KEY_在这里" 
+    api_key = " " 
     # st.warning("未检测到 .streamlit/secrets.toml 配置，请确保API KEY正确。")
 
 client = ZhipuAI(api_key=api_key)
@@ -401,4 +401,5 @@ if st.session_state.stage == 2:
 # 5. 输入框
 if prompt := st.chat_input("输入回答..."):
     handle_user_input(prompt)
+
 
