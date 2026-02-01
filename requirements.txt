@@ -1,4 +1,6 @@
-# 必须添加的依赖：zhipuai
-zhipuai
-# 基础依赖：streamlit
+# 基础依赖
 streamlit
+# 核心依赖
+zhipuai
+# zhipuai 附属依赖
+sniffio
