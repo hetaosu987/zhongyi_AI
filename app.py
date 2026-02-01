@@ -20,7 +20,7 @@ if not api_key or "YOUR_API_KEY" in api_key:
 
 client = ZhipuAI(api_key=api_key)
 
-# [修改点 1] 最大轮次改为 8
+# 最大轮次改为 8
 MAX_TURNS = 8
 
 CMD_GENERATE_REPORT = "我描述完了。请按照规定的Markdown格式，引用古籍，给出详细的、篇幅较长的诊断报告（包含具体的食疗方做法和穴位位置）。"
@@ -169,7 +169,7 @@ def get_ai_health_tip():
 
 def init_state():
     if "messages" not in st.session_state:
-        # [修改点 2] 优化 System Prompt，允许 AI 自主决定何时结束问诊
+        # 允许 AI 自主决定何时结束问诊
         system_prompt = f"""
         你是一位经验丰富的中医主任医师，精通《黄帝内经》《伤寒杂病论》，擅长体质辨证。
         
@@ -305,8 +305,6 @@ with st.sidebar:
             st.session_state.current_tip = get_ai_health_tip()
         st.rerun()
         
-    st.markdown("<br>"*3, unsafe_allow_html=True)
-    st.markdown("---")
     st.markdown(
         """
         <div style='text-align: center; color: #666; font-size: 12px; padding: 10px 0; background-color: rgba(0,0,0,0.02); border-radius: 5px;'>
@@ -433,3 +431,4 @@ if st.session_state.stage == 2:
 # 5. 输入框
 if prompt := st.chat_input("输入回答..."):
     handle_user_input(prompt)
+
